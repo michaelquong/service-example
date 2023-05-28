@@ -1,0 +1,32 @@
+version: "3.8"
+services:
+  db:
+    image: mysql:latest
+    ports:
+      - 3306
+    environment:
+      - MYSQL_ROOT_PASSWORD=changeme
+      - MYSQL_DATABASE=appdb
+      - MYSQL_USER=appuser
+      - MYSQL_PASSWORD=changeme
+    volumes:
+      - ./.data:/var/lib/mysql:rw
+    healthcheck:
+      test: mysqladmin ping -h 127.0.0.1 -u $$MYSQL_USER --password=$$MYSQL_PASSWORD
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: --debug
+    ports:
+      - 5000:5000
+    environment:
+      - db_name=appdb
+      - db_user=appuser
+      - db_password=changeme
+      - MYSQL_SERVICE_HOST=db
+      - MYSQL_SERVICE_PORT=3306
+      - SECRET_KEY=somethingsupersecret
+    depends_on:
+      db:
+        condition: service_healthy

@@ -1,0 +1,5 @@
+# Overriding values when deploying to local Minikube
+# Set pullPolicy to Never when testing deployment to Minikube.
+# Will reference locally build image during deployment.
+image:
+  pullPolicy: Never

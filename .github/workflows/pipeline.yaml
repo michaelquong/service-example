@@ -1,0 +1,65 @@
+name: CI/CD
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+          python -m pip install -r requirements-test.txt
+      - name: Run Pytests
+        run: echo TBD
+  build-image:
+    needs: tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      - name: Set up Docker
+        uses: docker/setup-docker@v2
+      - name: Login to GitHub Container Registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+      - name: version hash
+        id: commit_version
+        run: echo "::set-output name=hash::${{ github.sha }}"
+      - name: build and push image
+        run: |
+          make image
+          make image/tag VERSION="${{ steps.commit_version.outputs.hash }}"
+  deploy-image:
+    needs: build-image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      - name: version hash
+        id: commit_version
+        run: echo "::set-output name=hash::${{ github.sha }}"
+      - name: Set up kubeconfig
+        uses: azure/k8s-set-context@v1
+        with:
+          kubeconfig: ${{ secrets.KUBECONFIG }}
+      - name: Deploy with Helm3
+        run: |
+          make example-development VERSION="${{ steps.commit_version.outputs.hash }}"
+      - name: test deployment
+        run: |
+          helm test example
+      - name: Rollback on failure
+        if: ${{ failure() }}
+        run: |
+          helm rollback example 1
+      

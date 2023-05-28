@@ -1,0 +1,5 @@
+# Overriding values when deploying to a development Kubernetes Cluster
+# Pull image from container registry for development environment
+# registry & tag version will be overridden via automation at deployment time.
+image:
+  pullPolicy: IfNotPresent
